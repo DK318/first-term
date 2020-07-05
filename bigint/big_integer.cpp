@@ -91,6 +91,55 @@ big_integer big_integer::operator+() const
     return big_integer(*this);
 }
 
+big_integer big_integer::operator~() const
+{
+    return -(*this) - 1;
+}
+
+big_integer &big_integer::operator++()
+{
+    return (*this += 1);
+}
+
+big_integer &big_integer::operator--()
+{
+    return (*this -= 1);
+}
+
+big_integer big_integer::operator-() const
+{
+    if (digits.size() == 1 && digits[0] == 0)
+        return *this;
+    big_integer res(*this);
+    res.sign ^= true;
+    return res;
+}
+
+big_integer operator+(big_integer a, const big_integer &b)
+{
+    if (a.sign != b.sign)
+        return (a.sign ? b - (-a) : a - (-b));
+    size_t sz = std::max(a.digits.size(), b.digits.size());
+    big_integer result;
+    result.digits.resize(sz);
+    bool carry = false;
+    uint64_t sum;
+    for (size_t  i = 0; i < sz; i++) {
+        sum = (carry ? 1 : 0);
+        if (i < a.digits.size())
+            sum += a.digits[i];
+        if (i < b.digits.size())
+            sum += b.digits[i];
+        carry = (sum > UINT32_MAX);
+        result.digits[i] = (uint32_t)(sum & UINT32_MAX);
+    }
+    if (carry)
+        result.digits.push_back(1);
+    result.sign = a.sign;
+    result.delete_zeros();
+    return result;
+}
+
 big_integer operator-(big_integer a, const big_integer &b)
 {
     if (a.sign != b.sign)
@@ -116,13 +165,26 @@ big_integer operator-(big_integer a, const big_integer &b)
     return result;
 }
 
-big_integer big_integer::operator-() const
+big_integer operator*(big_integer a, const big_integer &b)
 {
-    if (digits.size() == 1 && digits[0] == 0)
-        return *this;
-    big_integer res(*this);
-    res.sign ^= true;
-    return res;
+    size_t sz = a.digits.size() + b.digits.size();
+    big_integer result;
+    result.digits.resize(sz);
+    for (size_t i = 0; i < a.digits.size(); i++) {
+        uint32_t carry = 0;
+        for (size_t j = 0; j < b.digits.size() || carry; j++) {
+            uint64_t mult = result.digits[i + j] + (uint64_t) a.digits[i] * (j < b.digits.size() ? b.digits[j] : 0) + carry;
+            result.digits[i + j] = (uint32_t)(mult & UINT32_MAX);
+            carry = (uint32_t)(mult >> 32);
+        }
+    }
+    result.delete_zeros();
+    if (result == 0) {
+        result.sign = false;
+    } else {
+        result.sign = a.sign ^ b.sign;
+    }
+    return result;
 }
 
 uint32_t trial(uint64_t a, uint64_t b, uint64_t c)
@@ -203,46 +265,29 @@ big_integer operator/(big_integer a, const big_integer &b)
 
 big_integer operator>>(big_integer a, int shift)
 {
+    if (shift < 0)
+        return a << (-shift);
+    a /= (uint32_t)1 << (shift % 32);
+    std::reverse(a.digits.begin(), a.digits.end());
     for (int i = 0; i < (shift / 32) && (a.digits.size() != 0); i++)
         a.digits.pop_back();
-    shift %= 32;
-    if (a.sign)
-        a -= ((uint32_t)1 << shift) - 1;
-    a /= (uint32_t)1 << shift;
-    return a;
-}
-
-big_integer operator*(big_integer a, const big_integer &b)
-{
-    size_t sz = a.digits.size() + b.digits.size();
-    big_integer result;
-    result.digits.resize(sz);
-    for (size_t i = 0; i < a.digits.size(); i++) {
-        uint32_t carry = 0;
-        for (size_t j = 0; j < b.digits.size() || carry; j++) {
-            uint64_t mult = result.digits[i + j] + (uint64_t) a.digits[i] * (j < b.digits.size() ? b.digits[j] : 0) + carry;
-            result.digits[i + j] = (uint32_t)(mult & UINT32_MAX);
-            carry = (uint32_t)(mult >> 32);
-        }
+    std::reverse(a.digits.begin(), a.digits.end());
+    if (a.digits.size() == 0) {
+        a = 0;
     }
-    result.sign = a.sign ^ b.sign;
-    result.delete_zeros();
-    return result;
+    return (a.sign ? a - 1 : a);
 }
 
-big_integer big_integer::operator~() const
+big_integer operator<<(big_integer a, int shift)
 {
-    return -(*this) - 1;
-}
-
-big_integer &big_integer::operator++()
-{
-    return (*this += 1);
-}
-
-big_integer &big_integer::operator--()
-{
-    return (*this -= 1);
+    if (shift < 0)
+        return  a >> (-shift);
+    a *= ((uint32_t) 1 << (shift % 32));
+    std::reverse(a.digits.begin(), a.digits.end());
+    for (int i = 0; i < (shift / 32); i++)
+        a.digits.push_back(0);
+    std::reverse(a.digits.begin(), a.digits.end());
+    return a;
 }
 
 std::string to_string(const big_integer &x)
@@ -345,31 +390,6 @@ big_integer abstract_bitwise_operation(big_integer a, const big_integer &b, std:
     return result;
 }
 
-big_integer operator+(big_integer a, const big_integer &b)
-{
-    if (a.sign != b.sign)
-        return (a.sign ? b - (-a) : a - (-b));
-    size_t sz = std::max(a.digits.size(), b.digits.size());
-    big_integer result;
-    result.digits.resize(sz);
-    bool carry = false;
-    uint64_t sum;
-    for (size_t  i = 0; i < sz; i++) {
-        sum = (carry ? 1 : 0);
-        if (i < a.digits.size())
-            sum += a.digits[i];
-        if (i < b.digits.size())
-            sum += b.digits[i];
-        carry = (sum > UINT32_MAX);
-        result.digits[i] = (uint32_t)(sum & UINT32_MAX);
-    }
-    if (carry)
-        result.digits.push_back(1);
-    result.sign = a.sign;
-    result.delete_zeros();
-    return result;
-}
-
 big_integer operator%(big_integer a, const big_integer &b)
 {
     return a - (a / b) * b;
@@ -397,16 +417,6 @@ big_integer operator^(big_integer a, const big_integer &b)
 std::ostream &operator<<(std::ostream &s, big_integer const &a)
 {
     return s << to_string(a);
-}
-
-big_integer operator<<(big_integer a, int shift)
-{
-    a *= ((uint32_t) 1 << (shift % 32));
-    std::reverse(a.digits.begin(), a.digits.end());
-    for (int i = 0; i < (shift / 32); i++)
-        a.digits.push_back(0);
-    std::reverse(a.digits.begin(), a.digits.end());
-    return a;
 }
 
 big_integer big_integer::operator++(int) {
