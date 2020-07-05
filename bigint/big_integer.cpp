@@ -4,7 +4,7 @@ big_integer::big_integer() : digits({0}), sign(false) {}
 
 big_integer::big_integer(int x) : sign(x < 0)
 {
-    digits.push_back(x < 0 ? (uint32_t)(-x) : (uint32_t)x);
+    digits.push_back(static_cast<uint32_t>(std::abs(static_cast<int64_t>(x))));
 }
 
 big_integer::big_integer(const std::string &str) : big_integer()
@@ -114,6 +114,8 @@ big_integer big_integer::operator-() const
     res.sign ^= true;
     return res;
 }
+
+//"+", "-", "*" were taken from emaxx and "/" -- from https://surface.syr.edu/cgi/viewcontent.cgi?article=1162&context=eecs_techreports
 
 big_integer operator+(big_integer a, const big_integer &b)
 {
