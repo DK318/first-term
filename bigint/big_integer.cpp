@@ -7,8 +7,10 @@ big_integer::big_integer(int x) : sign(x < 0)
     digits.push_back(x < 0 ? (uint32_t)(-x) : (uint32_t)x);
 }
 
-big_integer::big_integer(const std::string &str) : big_integer(0)
+big_integer::big_integer(const std::string &str) : big_integer()
 {
+    if (str.empty() || str == "0" || str == "-0")
+        return;
     size_t pos = (str[0] == '+' || str[0] == '-' ? 1 : 0);
     for (size_t i = pos; i < str.length(); i++) {
         if ('0' <= str[i] && str[i] <= '9') {
@@ -18,11 +20,8 @@ big_integer::big_integer(const std::string &str) : big_integer(0)
             throw std::invalid_argument("String is not a number");
         }
     }
-    if (digits.size() == 1 && digits[0] == 0) {
-        sign = false;
-    } else {
-        sign = (str[0] == '-');
-    }
+    sign = (str[0] == '-');
+    delete_zeros();
 }
 
 big_integer::big_integer(uint32_t x) : sign(false)
