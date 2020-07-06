@@ -7,6 +7,13 @@ big_integer::big_integer(int x) : sign(x < 0)
     digits.push_back(static_cast<uint32_t>(std::abs(static_cast<int64_t>(x))));
 }
 
+big_integer::big_integer(size_t sz) : big_integer()
+{
+    for (size_t i = 1; i < sz; i++) {
+        digits.push_back(0);
+    }
+}
+
 big_integer::big_integer(const std::string &str) : big_integer()
 {
     if (str.empty() || str == "0" || str == "-0")
@@ -122,8 +129,7 @@ big_integer operator+(big_integer a, const big_integer &b)
     if (a.sign != b.sign)
         return (a.sign ? b - (-a) : a - (-b));
     size_t sz = std::max(a.digits.size(), b.digits.size());
-    big_integer result;
-    result.digits.resize(sz);
+    big_integer result(sz);
     bool carry = false;
     uint64_t sum;
     for (size_t  i = 0; i < sz; i++) {
@@ -152,8 +158,7 @@ big_integer operator-(big_integer a, const big_integer &b)
         return -(b - a);
     bool carry = false;
     int64_t subtract;
-    big_integer result;
-    result.digits.resize(a.digits.size());
+    big_integer result(a.digits.size());
     for (size_t i = 0; i < a.digits.size(); i++) {
         subtract = a.digits[i];
         if (carry)
@@ -170,8 +175,7 @@ big_integer operator-(big_integer a, const big_integer &b)
 big_integer operator*(big_integer a, const big_integer &b)
 {
     size_t sz = a.digits.size() + b.digits.size();
-    big_integer result;
-    result.digits.resize(sz);
+    big_integer result(sz);
     for (size_t i = 0; i < a.digits.size(); i++) {
         uint32_t carry = 0;
         for (size_t j = 0; j < b.digits.size() || carry; j++) {
@@ -235,12 +239,11 @@ bool smaller(const big_integer &a, const big_integer &b, size_t k, size_t m)
 big_integer operator/(big_integer a, const big_integer &b)
 {
     big_integer first = a, second = b;
-    big_integer result, dq;
     first.sign = second.sign = false;
     if (first < second)
         return 0;
     if (second.digits.size() == 1) {
-        result = short_div(first, second.digits[0]);
+        big_integer result = short_div(first, second.digits[0]);
         result.sign = a.sign ^ b.sign;
         return result;
     }
@@ -249,7 +252,7 @@ big_integer operator/(big_integer a, const big_integer &b)
     second *= factor;
     first.digits.push_back(0);
     size_t n = first.digits.size(), m = second.digits.size();
-    result.digits.resize(n - m);
+    big_integer result(n - m), dq;
     for (size_t i = n - m; i != 0; i--) {
         uint32_t qt = trial(first.digits[i + m - 1], first.digits[i + m - 2], second.digits[m - 1]);
         dq = second * qt;

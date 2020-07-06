@@ -13,7 +13,6 @@ public:
     ~optimized_container();
     void push_back(uint32_t);
     void pop_back();
-    void resize(size_t);
     void reverse();
     size_t size() const;
     uint32_t const& operator[](size_t) const;
