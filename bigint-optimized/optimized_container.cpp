@@ -7,7 +7,7 @@ optimized_container::optimized_container(uint32_t x) : is_empty(false), is_small
     num.value = x;
 }
 
-optimized_container::optimized_container(const optimized_container &other) : is_empty(other.is_empty), is_small(other.is_small)
+optimized_container::optimized_container(optimized_container const &other) : is_empty(other.is_empty), is_small(other.is_small)
 {
     if (is_small) {
         num.value = other.num.value;
@@ -45,33 +45,21 @@ void optimized_container::push_back(uint32_t x)
 
 void optimized_container::pop_back()
 {
-    if (is_small) {
-        is_empty = true;
-        is_small = false;
-    } else {
-        unshare();
-        num.data->digits.pop_back();
-    }
-}
-
-void optimized_container::resize(size_t sz)
-{
-    if (is_empty && sz != 0) {
-        is_empty = false;
-        std::vector<uint32_t> vec(sz);
-        num.data = new shared_pointer(vec);
-    } else if (is_small) {
-        is_small = false;
-        if (sz == 0) {
-            is_empty = true;
+    if (!is_small && !is_empty) {
+        if (num.data->digits.size() == 2) {
+            uint32_t tmp = num.data->digits[0];
+            num.data->ref_cnt--;
+            if (num.data->ref_cnt == 0) {
+                delete num.data;
+            }
+            num.value = tmp;
+            is_small = true;
         } else {
-            std::vector<uint32_t> vec(sz);
-            vec[0] = num.value;
-            num.data = new shared_pointer(vec);
+            unshare();
+            num.data->digits.pop_back();
         }
     } else {
-        unshare();
-        num.data->digits.resize(sz);
+        is_empty = true;
     }
 }
 
@@ -110,13 +98,17 @@ uint32_t optimized_container::back() const
 
 optimized_container &optimized_container::operator=(optimized_container const& other)
 {
+    if (*this == other) {
+        return *this;
+    }
     this->~optimized_container();
     is_empty = other.is_empty;
     is_small = other.is_small;
     if (is_small) {
         num.value = other.num.value;
     } else if (!is_empty) {
-        num.data = new shared_pointer(*other.num.data);
+        num.data = other.num.data;
+        num.data->ref_cnt++;
     }
     return *this;
 }

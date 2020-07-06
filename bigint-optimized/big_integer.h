@@ -16,6 +16,7 @@ public:
     big_integer();
     big_integer(big_integer const&) = default;
     big_integer(int);
+    big_integer(size_t);
     big_integer(uint32_t);
     explicit big_integer(std::string const&);
     ~big_integer() = default;
