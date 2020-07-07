@@ -240,7 +240,7 @@ T const *vector<T>::end() const {
 }
 
 template<typename T>
-T *vector<T>::insert(iterator pos, T const &val) {
+T *vector<T>::insert(const_iterator pos, T const &val) {
     size_t position = pos - data_;
     push_back(val);
     for (size_t i = size_ - 1; i > position; i--) {
@@ -250,7 +250,7 @@ T *vector<T>::insert(iterator pos, T const &val) {
 }
 
 template<typename T>
-T *vector<T>::erase(iterator pos) {
+T *vector<T>::erase(const_iterator pos) {
     size_t position = pos - data_;
     for (size_t i = position; i < size_ - 1; i++) {
         std::swap(data_[i], data_[i + 1]);
@@ -260,7 +260,7 @@ T *vector<T>::erase(iterator pos) {
 }
 
 template<typename T>
-T *vector<T>::erase(iterator first, iterator last) {
+T *vector<T>::erase(const_iterator first, const_iterator last) {
     size_t diff = last - first;
     size_t first_pos = first - data_;
     for (size_t i = first_pos; i < size_ - diff; i++) {
