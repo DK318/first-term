@@ -200,7 +200,7 @@ big_integer operator*(big_integer a, const big_integer &b)
 
 uint32_t trial(uint64_t a, uint64_t b, uint64_t c)
 {
-    return std::min((uint32_t)(((a << 32) + b) / c), UINT32_MAX);
+    return std::min(static_cast<uint32_t>(((a << 32) + b) / c), UINT32_MAX);
 }
 
 big_integer short_div(const big_integer &a, uint32_t b)
