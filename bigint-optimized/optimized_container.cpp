@@ -1,99 +1,99 @@
 #include "optimized_container.h"
 
-optimized_container::optimized_container() : is_empty(true), is_small(false) {}
+optimized_container::optimized_container() : size_(0), is_small(true) {}
 
-optimized_container::optimized_container(uint32_t x) : is_empty(false), is_small(true)
+optimized_container::optimized_container(uint32_t x) : size_(1), is_small(true)
 {
-    num.value = x;
+    num.value[0] = x;
 }
 
-optimized_container::optimized_container(optimized_container const &other) : is_empty(other.is_empty), is_small(other.is_small)
+optimized_container::optimized_container(optimized_container const &other) : size_(other.size_), is_small(other.is_small)
 {
     if (is_small) {
-        num.value = other.num.value;
-    } else if (!is_empty) {
+        std::copy(other.num.value, other.num.value + size_, num.value);
+    } else {
         num.data = other.num.data;
-        num.data->ref_cnt++;
+        num.data->increase_ref();
     }
 }
 
 optimized_container::~optimized_container()
 {
-    if (!is_small && !is_empty) {
-        if (num.data->ref_cnt == 1) {
-            delete num.data;
-        } else {
-            num.data->ref_cnt--;
-        }
+    if (!is_small) {
+        num.data->decrease_ref();
     }
 }
 
 void optimized_container::push_back(uint32_t x)
 {
-    if (is_empty) {
-        is_empty = false;
-        is_small = true;
-        num.value = x;
-    } else if (is_small) {
-        is_small = false;
-        num.data = new shared_pointer(std::vector<uint32_t>({num.value, x}));
-    } else {
+    if (!is_small) {
         unshare();
-        num.data->digits.push_back(x);
+        num.data->push_back(x);
+    } else {
+        if (size_ == MAX_SZ) {
+            is_small = false;
+            std::vector<uint32_t> tmp(num.value, num.value + size_);
+            tmp.push_back(x);
+            num.data = new shared_pointer(tmp);
+        } else {
+            num.value[size_] = x;
+        }
     }
+    size_++;
 }
 
 void optimized_container::pop_back()
 {
-    if (!is_small && !is_empty) {
-        if (num.data->digits.size() == 2) {
-            uint32_t tmp = num.data->digits[0];
-            num.data->ref_cnt--;
-            if (num.data->ref_cnt == 0) {
-                delete num.data;
+    if (!is_small) {
+        if (size_ - 1 == MAX_SZ) {
+            uint32_t tmp[MAX_SZ];
+            for (size_t i = 0; i < MAX_SZ; i++) {
+                tmp[i] = (*num.data)[i];
             }
-            num.value = tmp;
+            num.data->decrease_ref();
+            std::copy(tmp, tmp + MAX_SZ, num.value);
             is_small = true;
         } else {
             unshare();
-            num.data->digits.pop_back();
+            num.data->pop_back();
         }
-    } else {
-        is_empty = true;
     }
+    size_--;
 }
 
 void optimized_container::reverse()
 {
-    if (!is_empty && !is_small) {
+    if (!is_small) {
         unshare();
-        std::reverse(num.data->digits.begin(), num.data->digits.end());
+        num.data->reverse();
+    } else {
+        std::reverse(num.value, num.value + size_);
     }
 }
 
 size_t optimized_container::size() const
 {
-    return (is_small ? (is_empty ? 0 : 1) : num.data->digits.size());
+    return size_;
 }
 
 uint32_t const& optimized_container::operator[](size_t ind) const
 {
-    return is_small ? num.value : num.data->digits[ind];
+    return (!is_small ? (*num.data)[ind] : num.value[ind]);
 }
 
 uint32_t& optimized_container::operator[](size_t ind)
 {
     if (is_small) {
-        return num.value;
+        return num.value[ind];
     } else {
         unshare();
-        return num.data->digits[ind];
+        return (*num.data)[ind];
     }
 }
 
 uint32_t optimized_container::back() const
 {
-    return is_small ? num.value : num.data->digits.back();
+    return is_small ? num.value[size_ - 1] : num.data->back();
 }
 
 optimized_container &optimized_container::operator=(optimized_container const& other)
@@ -102,32 +102,31 @@ optimized_container &optimized_container::operator=(optimized_container const& o
         return *this;
     }
     this->~optimized_container();
-    is_empty = other.is_empty;
+    size_ = other.size_;
     is_small = other.is_small;
     if (is_small) {
-        num.value = other.num.value;
-    } else if (!is_empty) {
+        std::copy(other.num.value, other.num.value + size_, num.value);
+    } else  {
         num.data = other.num.data;
-        num.data->ref_cnt++;
+        num.data->increase_ref();
     }
     return *this;
 }
 
 bool operator==(const optimized_container &first, const optimized_container &second)
 {
-    if (first.size() != second.size())
+    if (first.size() != second.size()) {
         return false;
+    }
     for (size_t i = 0; i < first.size(); i++) {
-        if (first[i] != second[i])
+        if (first[i] != second[i]) {
             return false;
+        }
     }
     return true;
 }
 
 void optimized_container::unshare()
 {
-    if (!num.data->unique()) {
-        num.data->ref_cnt--;
-        num.data = new shared_pointer(num.data->digits);
-    }
+    num.data = num.data->release();
 }
