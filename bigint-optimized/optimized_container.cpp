@@ -45,18 +45,8 @@ void optimized_container::push_back(uint32_t x)
 void optimized_container::pop_back()
 {
     if (!is_small) {
-        if (size_ - 1 == MAX_SZ) {
-            uint32_t tmp[MAX_SZ];
-            for (size_t i = 0; i < MAX_SZ; i++) {
-                tmp[i] = (*num.data)[i];
-            }
-            num.data->decrease_ref();
-            std::copy(tmp, tmp + MAX_SZ, num.value);
-            is_small = true;
-        } else {
-            unshare();
-            num.data->pop_back();
-        }
+        unshare();
+        num.data->pop_back();
     }
     size_--;
 }
