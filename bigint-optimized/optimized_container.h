@@ -7,6 +7,7 @@
 
 struct optimized_container {
 public:
+    static constexpr size_t MAX_SZ = 5;
     optimized_container();
     optimized_container(uint32_t);
     optimized_container(optimized_container const &);
@@ -24,10 +25,10 @@ public:
 private:
     void unshare();
 
-    bool is_empty;
+    size_t size_;
     bool is_small;
     union {
-        uint32_t value;
+        uint32_t value[MAX_SZ];
         shared_pointer *data;
     } num;
 };
