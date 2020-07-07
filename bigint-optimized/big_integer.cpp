@@ -18,9 +18,6 @@ big_integer::big_integer(size_t sz) : big_integer()
 
 big_integer::big_integer(const std::string &str) : big_integer()
 {
-    if (str.empty() || str == "0" || str == "-0") {
-        return;
-    }
     size_t pos = (str[0] == '+' || str[0] == '-' ? 1 : 0);
     for (size_t i = pos; i < str.length(); i++) {
         if ('0' <= str[i] && str[i] <= '9') {
@@ -30,7 +27,7 @@ big_integer::big_integer(const std::string &str) : big_integer()
             throw std::invalid_argument("String is not a number");
         }
     }
-    sign = (str[0] == '-');
+    sign = (*this == ZERO ? false : str[0] == '-');
     delete_zeros();
 }
 
