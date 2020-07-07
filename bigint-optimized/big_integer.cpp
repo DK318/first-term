@@ -1,5 +1,7 @@
 #include "big_integer.h"
 
+const big_integer ZERO = big_integer(0);
+
 big_integer::big_integer() : digits(0), sign(false) {}
 
 big_integer::big_integer(int x) : sign(x < 0)
@@ -16,8 +18,9 @@ big_integer::big_integer(size_t sz) : big_integer()
 
 big_integer::big_integer(const std::string &str) : big_integer()
 {
-    if (str.empty() || str == "0" || str == "-0")
+    if (str.empty() || str == "0" || str == "-0") {
         return;
+    }
     size_t pos = (str[0] == '+' || str[0] == '-' ? 1 : 0);
     for (size_t i = pos; i < str.length(); i++) {
         if ('0' <= str[i] && str[i] <= '9') {
@@ -115,8 +118,9 @@ big_integer &big_integer::operator--()
 
 big_integer big_integer::operator-() const
 {
-    if (digits.size() == 1 && digits[0] == 0)
+    if (*this == ZERO) {
         return *this;
+    }
     big_integer res(*this);
     res.sign ^= true;
     return res;
@@ -126,23 +130,27 @@ big_integer big_integer::operator-() const
 
 big_integer operator+(big_integer a, const big_integer &b)
 {
-    if (a.sign != b.sign)
+    if (a.sign != b.sign) {
         return (a.sign ? b - (-a) : a - (-b));
+    }
     size_t sz = std::max(a.digits.size(), b.digits.size());
     big_integer result(sz);
     bool carry = false;
     uint64_t sum;
     for (size_t  i = 0; i < sz; i++) {
         sum = (carry ? 1 : 0);
-        if (i < a.digits.size())
+        if (i < a.digits.size()) {
             sum += a.digits[i];
-        if (i < b.digits.size())
+        }
+        if (i < b.digits.size()) {
             sum += b.digits[i];
+        }
         carry = (sum > UINT32_MAX);
-        result.digits[i] = (uint32_t)(sum & UINT32_MAX);
+        result.digits[i] = static_cast<uint32_t>(sum & UINT32_MAX);
     }
-    if (carry)
+    if (carry) {
         result.digits.push_back(1);
+    }
     result.sign = a.sign;
     result.delete_zeros();
     return result;
@@ -150,23 +158,28 @@ big_integer operator+(big_integer a, const big_integer &b)
 
 big_integer operator-(big_integer a, const big_integer &b)
 {
-    if (a.sign != b.sign)
+    if (a.sign != b.sign) {
         return (a.sign ? -(-a + b) : a + (-b));
-    if (a.sign)
+    }
+    if (a.sign) {
         return -b - (-a);
-    if (a < b)
+    }
+    if (a < b) {
         return -(b - a);
+    }
     bool carry = false;
     int64_t subtract;
     big_integer result(a.digits.size());
     for (size_t i = 0; i < a.digits.size(); i++) {
         subtract = a.digits[i];
-        if (carry)
+        if (carry) {
             subtract--;
-        if (i < b.digits.size())
+        }
+        if (i < b.digits.size()) {
             subtract -= b.digits[i];
+        }
         carry = (subtract < 0);
-        result.digits[i] = (uint32_t)subtract;
+        result.digits[i] = static_cast<uint32_t>(subtract);
     }
     result.delete_zeros();
     return result;
@@ -179,32 +192,28 @@ big_integer operator*(big_integer a, const big_integer &b)
     for (size_t i = 0; i < a.digits.size(); i++) {
         uint32_t carry = 0;
         for (size_t j = 0; j < b.digits.size() || carry; j++) {
-            uint64_t mult = result.digits[i + j] + (uint64_t) a.digits[i] * (j < b.digits.size() ? b.digits[j] : 0) + carry;
-            result.digits[i + j] = (uint32_t)(mult & UINT32_MAX);
-            carry = (uint32_t)(mult >> 32);
+            uint64_t mult = result.digits[i + j] + static_cast<uint64_t>(a.digits[i]) * (j < b.digits.size() ? b.digits[j] : 0) + carry;
+            result.digits[i + j] = static_cast<uint32_t>(mult & UINT32_MAX);
+            carry = static_cast<uint32_t>(mult >> 32);
         }
     }
     result.delete_zeros();
-    if (result == 0) {
-        result.sign = false;
-    } else {
-        result.sign = a.sign ^ b.sign;
-    }
+    result.sign = (result == ZERO ? false : a.sign ^ b.sign);
     return result;
 }
 
 uint32_t trial(uint64_t a, uint64_t b, uint64_t c)
 {
-    return std::min((uint32_t)(((a << 32) + b) / c), UINT32_MAX);
+    return std::min(static_cast<uint32_t>(((a << 32) + b) / c), UINT32_MAX);
 }
 
 big_integer short_div(const big_integer &a, uint32_t b)
 {
     big_integer result;
     uint64_t carry = 0;
-    for (int i = (int)a.digits.size() - 1; i >= 0; i--) {
+    for (int i = static_cast<int>(a.digits.size()) - 1; i >= 0; i--) {
         uint64_t cur = (carry << 32) | a.digits[i];
-        result.digits.push_back((uint32_t)(cur / b));
+        result.digits.push_back(static_cast<uint32_t>(cur / b));
         carry = cur % b;
     }
     result.digits.reverse();
@@ -218,10 +227,10 @@ void difference(big_integer &a, const big_integer &b, size_t k, size_t m)
     for (size_t i = 0; i < m; i++) {
         uint32_t first = a.digits[i + k - 1];
         uint32_t second = (i < b.digits.size() ? b.digits[i] : 0);
-        uint64_t cur = (int64_t)first - second - carry;
+        uint64_t cur = static_cast<int64_t>(first) - second - carry;
         carry = (second + carry > first);
         cur &= UINT32_MAX;
-        a.digits[i + k - 1] = (uint32_t)cur;
+        a.digits[i + k - 1] = static_cast<uint32_t>(cur);
     }
 }
 
@@ -240,14 +249,16 @@ big_integer operator/(big_integer a, const big_integer &b)
 {
     big_integer first = a, second = b;
     first.sign = second.sign = false;
-    if (first < second)
+    if (first < second) {
         return 0;
+    }
     if (second.digits.size() == 1) {
-        big_integer result = short_div(first, second.digits[0]);
+        big_integer result;
+        result = short_div(first, second.digits[0]);
         result.sign = a.sign ^ b.sign;
         return result;
     }
-    uint32_t factor = (((uint64_t)1 << 32)) / (second.digits.back() + 1);
+    uint32_t factor = ((static_cast<uint64_t>(1) << 32)) / (second.digits.back() + 1);
     first *= factor;
     second *= factor;
     first.digits.push_back(0);
@@ -270,12 +281,14 @@ big_integer operator/(big_integer a, const big_integer &b)
 
 big_integer operator>>(big_integer a, int shift)
 {
-    if (shift < 0)
+    if (shift < 0) {
         return a << (-shift);
-    a /= (uint32_t)1 << (shift % 32);
+    }
+    a /= static_cast<uint32_t>(1) << (shift % 32);
     a.digits.reverse();
-    for (int i = 0; i < (shift / 32) && (a.digits.size() != 0); i++)
+    for (int i = 0; i < (shift / 32) && (a.digits.size() != 0); i++) {
         a.digits.pop_back();
+    }
     a.digits.reverse();
     if (a.digits.size() == 0) {
         a = 0;
@@ -285,28 +298,32 @@ big_integer operator>>(big_integer a, int shift)
 
 big_integer operator<<(big_integer a, int shift)
 {
-    if (shift < 0)
+    if (shift < 0) {
         return  a >> (-shift);
-    a *= ((uint32_t) 1 << (shift % 32));
+    }
+    a *= (static_cast<uint32_t>(1) << (shift % 32));
     a.digits.reverse();
-    for (int i = 0; i < (shift / 32); i++)
+    for (int i = 0; i < (shift / 32); i++) {
         a.digits.push_back(0);
+    }
     a.digits.reverse();
     return a;
 }
 
 std::string to_string(const big_integer &x)
 {
-    if (x == 0)
+    if (x == 0) {
         return "0";
+    }
     std::string result;
     big_integer tmp(x);
     while (tmp != 0) {
-        result += char((tmp % 10).digits[0] + '0');
+        result += static_cast<char>((tmp % 10).digits[0] + '0');
         tmp /= 10;
     }
-    if (x.sign)
+    if (x.sign) {
         result += "-";
+    }
     std::reverse(result.begin(), result.end());
     return result;
 }
@@ -335,9 +352,11 @@ bool operator<(const big_integer &a, const big_integer &b)
     } else if (a.digits.size() != b.digits.size()) {
         return a.digits.size() < b.digits.size();
     } else {
-        for (int i = (int)a.digits.size() - 1; i >= 0; i--)
-            if (a.digits[i] != b.digits[i])
+        for (int i = static_cast<int>(a.digits.size()) - 1; i >= 0; i--) {
+            if (a.digits[i] != b.digits[i]) {
                 return a.digits[i] < b.digits[i];
+            }
+        }
         return false;
     }
 }
@@ -360,19 +379,22 @@ void big_integer::swap(big_integer &second)
 
 void big_integer::delete_zeros()
 {
-    while (digits.size() > 1 && digits.back() == 0)
+    while (digits.size() > 1 && digits.back() == 0) {
         digits.pop_back();
+    }
 }
 
 void big_integer::addition_to_two(size_t length)
 {
     assert(length >= digits.size());
-    while (digits.size() != length)
+    while (digits.size() != length) {
         digits.push_back(0);
+    }
     if (sign) {
         sign = false;
-        for (size_t i = 0; i < digits.size(); i++)
+        for (size_t i = 0; i < digits.size(); i++) {
             digits[i] = ~digits[i];
+        }
         *this += 1;
     }
 }
@@ -385,9 +407,10 @@ big_integer abstract_bitwise_operation(big_integer a, const big_integer &b, std:
     first.addition_to_two(sz);
     second.addition_to_two(sz);
     result.addition_to_two(sz);
-    for (size_t i = 0; i < sz; i++)
+    for (size_t i = 0; i < sz; i++) {
         result.digits[i] = how(first.digits[i], second.digits[i]);
-    if (how((uint32_t)a.sign, (uint32_t)b.sign)) {
+    }
+    if (how(static_cast<uint32_t>(a.sign), static_cast<uint32_t>(b.sign))) {
         result = -result;
         result.addition_to_two(sz);
         result = -result;
