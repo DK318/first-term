@@ -11,7 +11,7 @@ public:
     shared_pointer(std::vector<uint32_t> const &);
     shared_pointer(shared_pointer const &);
     bool is_unique();
-    shared_pointer* release();
+    shared_pointer* unshare();
     void increase_ref();
     void decrease_ref();
     void reverse();
