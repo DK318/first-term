@@ -11,7 +11,7 @@ bool shared_pointer::is_unique()
     return ref_cnt == 1;
 }
 
-shared_pointer *shared_pointer::release()
+shared_pointer *shared_pointer::unshare()
 {
     if (is_unique()) {
         return this;

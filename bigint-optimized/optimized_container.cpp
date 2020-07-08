@@ -88,7 +88,7 @@ uint32_t optimized_container::back() const
 
 optimized_container &optimized_container::operator=(optimized_container const& other)
 {
-    if (*this == other) {
+    if (this == &other) {
         return *this;
     }
     this->~optimized_container();
@@ -118,5 +118,5 @@ bool operator==(const optimized_container &first, const optimized_container &sec
 
 void optimized_container::unshare()
 {
-    num.data = num.data->release();
+    num.data = num.data->unshare();
 }
